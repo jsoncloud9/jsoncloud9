@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>농업 기후 적합성 분석 시스템 (Crop Suitability Analyzer)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.3);
+            
+            --optimal: #10b981;
+            --optimal-glow: rgba(16, 185, 129, 0.4);
+            --limit: #f59e0b;
+            --limit-glow: rgba(245, 158, 11, 0.4);
+            --impossible: #ef4444;
+            --impossible-glow: rgba(239, 68, 68, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 1s ease-out;
+        }
+
+        header h1 {
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Form styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 1.5rem;
+            align-items: end;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper i {
+            position: absolute;
+            right: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        select, input {
+            width: 100%;
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            appearance: none;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 1rem 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            height: 3.3rem;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .loader-container {
+            display: none;
+            text-align: center;
+            padding: 3rem 0;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-text {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Results dashboard */
+        .results-container {
+            display: none;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .dashboard-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .badge-card {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .status-glowing-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        /* Dynamic Status Styling */
+        .status-optimal {
+            background: var(--optimal);
+            box-shadow: 0 0 30px var(--optimal-glow);
+        }
+        .status-limit {
+            background: var(--limit);
+            box-shadow: 0 0 30px var(--limit-glow);
+        }
+        .status-impossible {
+            background: var(--impossible);
+            box-shadow: 0 0 30px var(--impossible-glow);
+        }
+
+        .badge-details h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .badge-details .region-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .badge-details .suitability-label {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        /* Stats Grid */
+        .indicators-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2rem 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .indicator-card {
+            background: rgba(31, 41, 55, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s ease;
+        }
+
+        .indicator-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .ind-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ind-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .ind-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        /* Mini badges */
+        .ind-badge.optimal { background: rgba(16, 185, 129, 0.15); color: var(--optimal); }
+        .ind-badge.limit { background: rgba(245, 158, 11, 0.15); color: var(--limit); }
+        .ind-badge.impossible { background: rgba(239, 68, 68, 0.15); color: var(--impossible); }
+
+        .ind-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .ind-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+        }
+
+        .ind-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Prediction Card Section */
+        .prediction-panel {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .prediction-title {
+            color: #60a5fa;
+        }
+
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .predict-metric-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #3b82f6;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .metric-unit {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Error message styling */
+        .error-panel {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 16px;
+            color: #fca5a5;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: center;
+            gap: 1rem;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .error-panel i {
+            font-size: 1.5rem;
+        }
+
+        /* Keyframes */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1><i class="fa-solid fa-seedling"></i> Crop Suitability Analyzer</h1>
+        <p>전국 226개 기초자치단체의 실시간 기상자료 기반 작물 기후 적합성 분석</p>
+    </header>
+
+    <!-- Control Panel -->
+    <div class="glass-panel">
+        <form id="analyze-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="muni-select">지역 선택 (기초자치단체)</label>
+                    <div class="select-wrapper">
+                        <select id="muni-select" required>
+                            <option value="" disabled selected>지역을 불러오는 중...</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="year-input">분석 연도</label>
+                    <input type="number" id="year-input" min="2000" max="2026" value="2025" required>
+                </div>
+                <button type="submit" class="btn-submit">
+                    <i class="fa-solid fa-chart-line"></i> 분석 실행
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="error-panel" id="error-alert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="error-message">오류 메시지가 표시됩니다.</span>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loader-container" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">기상청(KMA) 기후 데이터 수집 및 머신러닝 예측 모델 구동 중...</div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="results-container" id="results">
+        
+        <!-- Suitability Header Badge -->
+        <div class="glass-panel badge-card" id="suit-badge-card">
+            <div class="status-glowing-circle" id="suit-circle">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="badge-details">
+                <h3 id="analysis-year-label">2025년 기후 적합도</h3>
+                <div class="region-name" id="result-region">경기 수원시</div>
+                <div class="suitability-label" id="result-suitability">상업 최적지 (적합도 2등급)</div>
+            </div>
+        </div>
+
+        <!-- Physical Metrics Cards -->
+        <div class="indicators-title">
+            <i class="fa-solid fa-temperature-half"></i> 핵심 기후 물리 지표 실측치
+        </div>
+        <div class="indicators-grid">
+            
+            <!-- Cold Wave Days -->
+            <div class="indicator-card">
+                <div class="ind-header">
+                    <div class="ind-icon" style="color: #60a5fa;"><i class="fa-solid fa-snowflake"></i></div>
+                    <span class="ind-badge" id="badge-cold">최적</span>
+                </div>
+                <div class="ind-title">한파일수 (연간)</div>
+                <div class="ind-value" id="val-cold">0일</div>
+                <div class="ind-desc" id="desc-cold">최저기온 ≤ -12.0°C인 일수 (감귤 동해 한계치)</div>
+            </div>
+
+            <!-- Heat Stress Days -->
+            <div class="indicator-card">
+                <div class="ind-header">
+                    <div class="ind-icon" style="color: #f87171;"><i class="fa-solid fa-fire"></i></div>
+                    <span class="ind-badge" id="badge-heat">최적</span>
+                </div>
+                <div class="ind-title">고온스트레스 일수</div>
+                <div class="ind-value" id="val-heat">0일</div>
+                <div class="ind-desc" id="desc-heat">일평균기온 ≥ 30.0°C인 일수 (고온 장해)</div>
+            </div>
+
+            <!-- GDD -->
+            <div class="indicator-card">
+                <div class="ind-header">
+                    <div class="ind-icon" style="color: #34d399;"><i class="fa-solid fa-chart-area"></i></div>
+                    <span class="ind-badge" id="badge-gdd">최적</span>
+                </div>
+                <div class="ind-title">유효적산온도 (GDD)</div>
+                <div class="ind-value" id="val-gdd">2300.0</div>
+                <div class="ind-desc" id="desc-gdd">생육 임계온도 10°C 기준 누적 적산온도</div>
+            </div>
+
+            <!-- Precipitation -->
+            <div class="indicator-card">
+                <div class="ind-header">
+                    <div class="ind-icon" style="color: #60a5fa;"><i class="fa-solid fa-cloud-showers-water"></i></div>
+                    <span class="ind-badge" id="badge-rain">최적</span>
+                </div>
+                <div class="ind-title">연강수량</div>
+                <div class="ind-value" id="val-rain">1300.0 mm</div>
+                <div class="ind-desc" id="desc-rain">연간 누적 강수량 (1575mm 이하 최적)</div>
+            </div>
+
+            <!-- Sunshine Hours -->
+            <div class="indicator-card">
+                <div class="ind-header">
+                    <div class="ind-icon" style="color: #fbbf24;"><i class="fa-solid fa-sun"></i></div>
+                    <span class="ind-badge" id="badge-sun">최적</span>
+                </div>
+                <div class="ind-title">연일조시간</div>
+                <div class="ind-value" id="val-sun">2100.0 시간</div>
+                <div class="ind-desc" id="desc-sun">연간 누적 일조시간 (1928시간 이상 최적)</div>
+            </div>
+        </div>
+
+        <!-- 2nd Stage predictions (Yield, Quality) -->
+        <div id="secondary-section" style="display: none;">
+            <div class="indicators-title prediction-title">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> AI 2단계 예측 지표 (상업/시험재배 적합지 대상)
+            </div>
+            <div class="glass-panel prediction-panel">
+                <div class="prediction-grid">
+                    <div class="predict-metric-card">
+                        <div class="metric-label">예상 단수 (Yield)</div>
+                        <div class="metric-value" id="pred-yield">2,200 <span class="metric-unit">kg/10a</span></div>
+                    </div>
+                    <div class="predict-metric-card">
+                        <div class="metric-label">예상 품질 점수 (당산비 지표)</div>
+                        <div class="metric-value" id="pred-quality">8.5 <span class="metric-unit">/10</span></div>
+                    </div>
+                    <div class="predict-metric-card">
+                        <div class="metric-label">동해 피해 발생 확률</div>
+                        <div class="metric-value" id="pred-freeze" style="color: #ef4444;">1.5 <span class="metric-unit">%</span></div>
+                    </div>
+                    <div class="predict-metric-card">
+                        <div class="metric-label">착색 장해 위험도</div>
+                        <div class="metric-value" id="pred-color" style="color: #f59e0b;">1.1 <span class="metric-unit">점</span></div>
+                    </div>
+                    <div class="predict-metric-card">
+                        <div class="metric-label">병해충 발생 강도</div>
+                        <div class="metric-value" id="pred-disease" style="color: #f59e0b;">3.4 <span class="metric-unit">점</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 농업 기후 적합성 분석 시스템. Powered by KMA Open API & XGBoost ML Model.</p>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const muniSelect = document.getElementById('muni-select');
+        const analyzeForm = document.getElementById('analyze-form');
+        const loader = document.getElementById('loader');
+        const results = document.getElementById('results');
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+
+        // Fetch Municipalities on Load
+        fetch('/municipalities')
+            .then(res => {
+                if (!res.ok) throw new Error('자치단체 목록을 불러오지 못했습니다.');
+                return res.json();
+            })
+            .then(data => {
+                muniSelect.innerHTML = '<option value="" disabled selected>지역을 선택하세요</option>';
+                data.municipalities.forEach(muni => {
+                    const opt = document.createElement('option');
+                    opt.value = muni;
+                    opt.textContent = muni;
+                    muniSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                showError(err.message);
+                muniSelect.innerHTML = '<option value="" disabled>지역 로딩 실패</option>';
+            });
+
+        // Form Submit
+        analyzeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const muni = muniSelect.value;
+            const year = document.getElementById('year-input').value;
+
+            if (!muni) {
+                showError('기초자치단체를 선택해주세요.');
+                return;
+            }
+
+            // Reset UI states
+            errorAlert.style.display = 'none';
+            results.style.display = 'none';
+            loader.style.display = 'flex';
+
+            // Fetch suitability prediction
+            fetch(`/predict?muni=${encodeURIComponent(muni)}&year=${year}`)
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(json => {
+                            throw new Error(json.error || '분석 중 알 수 없는 서버 에러가 발생했습니다.');
+                        });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    loader.style.display = 'none';
+                    displayResults(data);
+                })
+                .catch(err => {
+                    loader.style.display = 'none';
+                    showError(err.message);
+                });
+        });
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorAlert.style.display = 'flex';
+            window.scrollTo({ top: errorAlert.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function displayResults(data) {
+            // Region & Suitability text
+            document.getElementById('analysis-year-label').textContent = `${data.analysis_year}년 기후 적합도 분석`;
+            document.getElementById('result-region').textContent = data.municipality;
+            
+            const suitText = document.getElementById('result-suitability');
+            suitText.textContent = data.suitability_result;
+
+            // Status Styling Mapping
+            const suitCircle = document.getElementById('suit-circle');
+            const suitCard = document.getElementById('suit-badge-card');
+            
+            // Clean classes
+            suitCircle.className = 'status-glowing-circle';
+            
+            const code = data.suitability_code;
+            if (code === 2) {
+                // Optimal
+                suitCircle.classList.add('status-optimal');
+                suitCircle.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                suitText.style.color = 'var(--optimal)';
+            } else if (code === 1) {
+                // Limit / Test
+                suitCircle.classList.add('status-limit');
+                suitCircle.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+                suitText.style.color = 'var(--limit)';
+            } else {
+                // Impossible
+                suitCircle.classList.add('status-impossible');
+                suitCircle.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+                suitText.style.color = 'var(--impossible)';
+            }
+
+            // Physical indicators
+            const phys = data.physical_indicators;
+            
+            // Cold days
+            document.getElementById('val-cold').textContent = `${phys.cold_wave_days.value}일`;
+            updateBadge('badge-cold', phys.cold_wave_days.status);
+            document.getElementById('desc-cold').textContent = phys.cold_wave_days.detail;
+
+            // Heat days
+            document.getElementById('val-heat').textContent = `${phys.heat_stress_days.value}일`;
+            updateBadge('badge-heat', phys.heat_stress_days.status);
+            document.getElementById('desc-heat').textContent = phys.heat_stress_days.detail;
+
+            // GDD
+            document.getElementById('val-gdd').textContent = phys.gdd_accumulated.value.toLocaleString();
+            updateBadge('badge-gdd', phys.gdd_accumulated.status);
+            document.getElementById('desc-gdd').textContent = phys.gdd_accumulated.detail;
+
+            // Rain
+            document.getElementById('val-rain').textContent = `${phys.annual_precipitation_mm.value.toLocaleString()} mm`;
+            updateBadge('badge-rain', phys.annual_precipitation_mm.status);
+            document.getElementById('desc-rain').textContent = phys.annual_precipitation_mm.detail;
+
+            // Sun
+            document.getElementById('val-sun').textContent = `${phys.annual_sunshine_hours.value.toLocaleString()} 시간`;
+            updateBadge('badge-sun', phys.annual_sunshine_hours.status);
+            document.getElementById('desc-sun').textContent = phys.annual_sunshine_hours.detail;
+
+            // Secondary predictions panel
+            const secSection = document.getElementById('secondary-section');
+            if (code > 0 && data.secondary_predictions && Object.keys(data.secondary_predictions).length > 0) {
+                const sec = data.secondary_predictions;
+                document.getElementById('pred-yield').innerHTML = `${sec.expected_yield_kg_10a.toLocaleString()} <span class="metric-unit">kg/10a</span>`;
+                document.getElementById('pred-quality').innerHTML = `${sec.quality_score_10.toFixed(2)} <span class="metric-unit">/10</span>`;
+                document.getElementById('pred-freeze').innerHTML = `${sec.freeze_risk_pct.toFixed(1)} <span class="metric-unit">%</span>`;
+                document.getElementById('pred-color').innerHTML = `${sec.coloring_fault_score.toFixed(1)} <span class="metric-unit">점</span>`;
+                document.getElementById('pred-disease').innerHTML = `${sec.disease_pest_score.toFixed(1)} <span class="metric-unit">점</span>`;
+                secSection.style.display = 'block';
+            } else {
+                secSection.style.display = 'none';
+            }
+
+            // Show Results
+            results.style.display = 'block';
+            window.scrollTo({ top: results.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function updateBadge(badgeId, status) {
+            const badge = document.getElementById(badgeId);
+            badge.textContent = status;
+            badge.className = 'ind-badge';
+            
+            if (status === '최적') {
+                badge.classList.add('optimal');
+            } else if (status === '한계') {
+                badge.classList.add('limit');
+            } else {
+                badge.classList.add('impossible');
+            }
+        }
+    });
+</script>
+</body>
+</html>

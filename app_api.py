@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pandas as pd
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from xgboost import XGBClassifier
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -143,14 +143,7 @@ def get_sun_status(val):
     else: return "불가", f"{val:.1f}시간 (기준: <1571시간 불가)"
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({
-        "status": "online",
-        "message": "기후 적합성 분석 API 서버가 정상 동작 중입니다.",
-        "endpoints": {
-            "predict": "/predict?muni=기초자치단체명&year=연도",
-            "municipalities": "/municipalities"
-        }
-    })
+    return render_template('index.html')
 
 @app.route('/predict', methods=['GET'])
 def predict_suitability():
