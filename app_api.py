@@ -141,6 +141,16 @@ def get_sun_status(val):
     if val >= 1928: return "최적", f"{val:.1f}시간 (기준: >=1928시간 최적)"
     elif val >= 1571: return "한계", f"{val:.1f}시간 (기준: 1571~1927시간 한계)"
     else: return "불가", f"{val:.1f}시간 (기준: <1571시간 불가)"
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "status": "online",
+        "message": "기후 적합성 분석 API 서버가 정상 동작 중입니다.",
+        "endpoints": {
+            "predict": "/predict?muni=기초자치단체명&year=연도",
+            "municipalities": "/municipalities"
+        }
+    })
 
 @app.route('/predict', methods=['GET'])
 def predict_suitability():
