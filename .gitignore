@@ -1,0 +1,22 @@
+# Python 캐시 및 빌드 파일
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook 임시 체크포인트
+.ipynb_checkpoints
+
+# 분석 데이터 결과 (대용량 파일 업로드 방지)
+*.csv
+
+# 기타 OS 및 에디터 설정
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
